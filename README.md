@@ -1,46 +1,44 @@
 # AI Job Matching System
 
 ## 1. Project Overview
-The **AI Job Matching System** is a backend pipeline and API designed to aggregate job postings from multiple sources, evaluate their relevance to a specific user persona (e.g., AI/ML Engineers), and present the best matches. 
+The **AI Job Matching System** is a full-stack application designed to aggregate job postings from multiple sources, evaluate their relevance to a specific user persona (e.g., AI/ML Engineers), and present the best matches through a modern web interface.
 
-It was built to solve the problem of job discovery fatigue by automating the collection of fresh job listings, bypassing sophisticated bot detection on job boards, and algorithmically scoring the jobs so users only see highly relevant opportunities.
+It solves the problem of job discovery fatigue by automating the collection of fresh job listings, bypassing sophisticated bot detection on job boards, algorithmically scoring the jobs, and presenting them in a clean, responsive dashboard so users only see highly relevant opportunities.
 
 ## 2. Features
+- **Full-Stack Web UI:** A fast, responsive dashboard built with FastAPI, Jinja2 templates, and TailwindCSS for filtering, ranking, and viewing detailed job listings.
 - **Multi-Source Job Ingestion:** Pulls data from both structured APIs (RemoteOK) and complex, bot-protected web pages (Naukri via `undetected-chromedriver`).
+- **Deep Metadata Extraction:** Uses `BeautifulSoup` to accurately parse nested DOM elements and extract rich metadata, including skills, required experience, salary, and detailed descriptions.
 - **Deduplication:** Uses deterministic MD5 hashing of job URLs to ensure idempotent database inserts and prevent duplicate records.
-- **Relevance Scoring:** Automatically scores jobs (0.0 to 1.0) using a tiered keyword matching system on the job title and description.
-- **Filtering & Ranking API:** RESTful endpoints to filter jobs by minimum score, keywords, source, and to retrieve top-ranked jobs.
+- **Relevance Scoring:** Automatically scores jobs (0.0 to 1.0) using a hybrid semantic scoring engine powered by keyword matching and the Gemini API.
 
 ## 3. Tech Stack
 - **Language:** Python 3.11+
-- **Framework:** FastAPI, Uvicorn
+- **Backend Framework:** FastAPI, Uvicorn
+- **Frontend UI:** Jinja2 Templates, TailwindCSS
 - **Database:** PostgreSQL, SQLAlchemy (ORM), psycopg2
-- **Scraping:** Requests, Selenium, undetected-chromedriver
+- **Scraping:** Requests, Selenium, `undetected-chromedriver`, `BeautifulSoup4`
+- **AI/LLM:** Google Gemini API
 - **Infrastructure:** Docker & Docker Compose (for the database)
 
 ## 4. Architecture
-The system follows a modular, sequential pipeline:
-1. **Scraper Engine:** Individual scraper modules (`RemoteOKScraper`, `NaukriScraper`) fetch and parse job data.
-2. **Relevance Scoring:** Each parsed job is evaluated against weighted keyword tiers (Strong, Medium, Negative) to generate a normalized `relevance_score`.
-3. **Database Layer:** Jobs are inserted into a PostgreSQL database with an `on_conflict_do_nothing` strategy for deduplication.
-4. **API Layer:** FastAPI serves the aggregated and scored data to the client.
+The system follows a modular pipeline:
+1. **Scraper Engine:** Individual scraper modules fetch data and parse nested elements.
+2. **Relevance Scoring:** Each parsed job is evaluated against a semantic scoring engine to generate a normalized `relevance_score`.
+3. **Database Layer:** Jobs and their rich metadata (skills, experience, salary) are inserted into PostgreSQL.
+4. **API & UI Layer:** FastAPI serves RESTful JSON endpoints and renders the Jinja2 HTML dashboard for the user.
 
-## 5. API Endpoints
+## 5. Endpoints & Pages
 
-### `POST /run`
-Triggers the full ingestion pipeline. Runs all active scrapers, scores the new jobs, saves them to the database, and returns a summary of the run.
-- **Response:** `{"scraped": 150, "new_saved": 10, "duplicates": 140, "avg_score": 0.45}`
+### Web UI (HTML)
+- `GET /` — Dashboard with filters and job listings.
+- `GET /top` — Top-ranked jobs (score > 0.3).
+- `GET /job/{id}` — Job detail page showing full descriptions, skills, and metadata.
 
-### `GET /jobs`
-Returns all jobs from the database, supporting query parameters for filtering and sorting.
-- **Query Params:**
-  - `min_score` (float): Minimum relevance score (0.0 to 1.0).
-  - `keyword` (string): Search term in title or description.
-  - `source` (string): Filter by scraper source (e.g., "remoteok").
-  - `limit` (int): Maximum number of results to return.
-
-### `GET /jobs/top`
-Convenience endpoint that returns the top 20 jobs with a `relevance_score` > 0.5, sorted by score descending.
+### API Endpoints (JSON)
+- `POST /run` — Triggers the full ingestion pipeline. Runs active scrapers, scores jobs, saves them, and returns a summary.
+- `GET /api/jobs` — Returns jobs from the database (supports `min_score`, `keyword`, `source`, `limit`).
+- `GET /api/jobs/top` — Returns the top 20 jobs with a `relevance_score` > 0.5.
 
 ## 6. Setup Instructions
 
@@ -53,7 +51,8 @@ Convenience endpoint that returns the top 20 jobs with a `relevance_score` > 0.5
 2. **Set up the virtual environment**
    ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+   # On Windows:
+   .\venv\Scripts\activate
    ```
 
 3. **Install dependencies**
@@ -62,7 +61,7 @@ Convenience endpoint that returns the top 20 jobs with a `relevance_score` > 0.5
    ```
 
 4. **Set up environment variables**
-   Copy the example environment file and update the database URL if necessary:
+   Copy the example environment file and update your PostgreSQL URL and Gemini API Key:
    ```bash
    cp .env.example .env
    ```
@@ -73,9 +72,9 @@ Convenience endpoint that returns the top 20 jobs with a `relevance_score` > 0.5
    docker-compose up -d
    ```
 
-6. **Start the API Server**
+6. **Start the Server**
    ```bash
-   uvicorn api.main:app --reload
+   python -m uvicorn api.main:app --reload
    ```
 
 ## 7. Example Usage
@@ -85,12 +84,12 @@ Convenience endpoint that returns the top 20 jobs with a `relevance_score` > 0.5
 curl -X POST "http://127.0.0.1:8000/run"
 ```
 
-**Get the top-ranked jobs:**
+**Get the top-ranked jobs (API):**
 ```bash
-curl -X GET "http://127.0.0.1:8000/jobs/top"
+curl -X GET "http://127.0.0.1:8000/api/jobs/top"
 ```
 
-**Filter jobs with a minimum score and specific keyword:**
+**Filter jobs via API:**
 ```bash
-curl -X GET "http://127.0.0.1:8000/jobs?min_score=0.3&keyword=python&limit=10"
+curl -X GET "http://127.0.0.1:8000/api/jobs?min_score=0.3&keyword=python&limit=10"
 ```
