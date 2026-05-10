@@ -1,25 +1,35 @@
 """
-FastAPI application — AI Job Matching System (Phase 2)
+FastAPI application — AI Job Matching System (Phase 2 + UI)
 
-Endpoints:
-    GET  /jobs      → filtered & sorted jobs from DB
-    GET  /jobs/top  → top 20 jobs by relevance score
-    POST /run       → scrape + score + save pipeline
-    GET  /health    → health check
+API Endpoints (JSON):
+    GET  /api/jobs      → filtered & sorted jobs from DB
+    GET  /api/jobs/top  → top 20 jobs by relevance score
+    POST /run           → scrape + score + save pipeline
+    GET  /health        → health check
+
+UI Pages (HTML):
+    GET  /              → Dashboard with filters
+    GET  /top           → Top-ranked jobs
+    GET  /job/{id}      → Job detail page
 """
 
 import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from db.crud import get_all_jobs, get_filtered_jobs, get_top_jobs, save_jobs
 from db.database import get_db, init_db
+from db.models import Job, make_job_id
 from scoring.relevance import score_job
 from scrapers.naukri import NaukriScraper
 from scrapers.remoteok import RemoteOKScraper
@@ -33,6 +43,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Template setup
+# ---------------------------------------------------------------------------
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 # ---------------------------------------------------------------------------
 # Lifespan — initialise DB tables on startup
@@ -57,8 +73,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AI Job Matching System",
-    description="Phase 2 — Job aggregation, scoring & filtering pipeline",
-    version="2.0.0",
+    description="Phase 2 — Job aggregation, scoring & filtering pipeline with UI",
+    version="2.1.0",
     lifespan=lifespan,
 )
 
@@ -68,6 +84,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files directory (if it exists)
+static_dir = BASE_DIR / "static"
+static_dir.mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
 # ---------------------------------------------------------------------------
@@ -93,10 +114,82 @@ def _job_to_dict(j) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Routes
+# UI Routes (HTML pages)
 # ---------------------------------------------------------------------------
 
-@app.get("/jobs", summary="Get jobs with filtering & sorting")
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def dashboard_page(
+    request: Request,
+    keyword: Optional[str] = Query(None),
+    source: Optional[str] = Query(None),
+    min_score: Optional[float] = Query(None, ge=0.0, le=1.0),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    """Dashboard page — renders the job listing with filters."""
+    # Get total count for display
+    total_jobs = db.query(Job).count()
+
+    # Apply filters
+    effective_min_score = min_score if min_score and min_score > 0 else None
+    jobs = get_filtered_jobs(
+        db,
+        min_score=effective_min_score,
+        keyword=keyword,
+        source=source,
+        limit=limit,
+    )
+
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "jobs": jobs,
+        "total_jobs": total_jobs,
+        "keyword": keyword,
+        "source": source,
+        "min_score": min_score,
+        "active_page": "dashboard",
+    })
+
+
+@app.get("/top", response_class=HTMLResponse, include_in_schema=False)
+def top_jobs_page(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Top jobs page — shows highest-scored jobs."""
+    jobs = get_top_jobs(db, min_score=0.3, limit=20)
+
+    return templates.TemplateResponse("top.html", {
+        "request": request,
+        "jobs": jobs,
+        "active_page": "top",
+    })
+
+
+@app.get("/job/{job_id}", response_class=HTMLResponse, include_in_schema=False)
+def job_detail_page(
+    job_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Job detail page — shows full description and metadata."""
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    return templates.TemplateResponse("detail.html", {
+        "request": request,
+        "job": job,
+        "active_page": None,
+    })
+
+
+# ---------------------------------------------------------------------------
+# API Routes (JSON — prefixed with /api for clarity, plus originals)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/jobs", summary="Get jobs with filtering & sorting")
+@app.get("/jobs", summary="Get jobs with filtering & sorting (legacy)", include_in_schema=False)
 def list_jobs(
     min_score: Optional[float] = Query(None, ge=0.0, le=1.0, description="Minimum relevance score"),
     keyword: Optional[str] = Query(None, description="Search keyword (title + description)"),
@@ -115,11 +208,13 @@ def list_jobs(
     jobs = get_filtered_jobs(
         db, min_score=min_score, keyword=keyword, source=source, limit=limit
     )
+        
     return [_job_to_dict(j) for j in jobs]
 
 
-@app.get("/jobs/top", summary="Get top-ranked jobs")
-def top_jobs(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
+@app.get("/api/jobs/top", summary="Get top-ranked jobs")
+@app.get("/jobs/top", summary="Get top-ranked jobs (legacy)", include_in_schema=False)
+def get_top_jobs_api(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
     """Return top 20 jobs with relevance_score > 0.5, sorted by score descending."""
     jobs = get_top_jobs(db, min_score=0.5, limit=20)
     return [_job_to_dict(j) for j in jobs]
@@ -173,6 +268,7 @@ def _score_all_jobs(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         except Exception as exc:
             logger.warning("Scoring failed for %r: %s", job.get("title"), exc)
             job["relevance_score"] = 0.0
+
     return jobs
 
 
@@ -182,7 +278,7 @@ def _log_scoring_summary(jobs: list[dict[str, Any]]) -> None:
         return
 
     scores = [j.get("relevance_score", 0.0) for j in jobs]
-    avg = sum(scores) / len(scores)
+    avg = sum(scores) / len(scores) if scores else 0.0
     logger.info("Scoring summary — %d jobs, avg_score=%.4f", len(jobs), avg)
 
     ranked = sorted(jobs, key=lambda j: j.get("relevance_score", 0.0), reverse=True)
@@ -228,7 +324,7 @@ async def run_pipeline(db: Session = Depends(get_db)) -> dict[str, Any]:
         logger.error("DB save failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Database error: {exc}")
 
-    avg_score = sum(j.get("relevance_score", 0.0) for j in jobs) / len(jobs)
+    avg_score = sum(j.get("relevance_score", 0.0) for j in jobs) / len(jobs) if jobs else 0.0
 
     logger.info(
         "Pipeline complete — scraped=%d  new_saved=%d  duplicates=%d  avg_score=%.4f",

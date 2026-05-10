@@ -123,13 +123,20 @@ class NaukriScraper(BaseScraper):
         return jobs
 
     def _extract_jobs(self, driver: uc.Chrome) -> list[dict[str, Any]]:
+        from bs4 import BeautifulSoup
         jobs: list[dict[str, Any]] = []
 
         try:
-            cards = driver.find_elements(By.CSS_SELECTOR, "div.srp-jobtuple-wrapper")
+            html = driver.page_source
+            soup = BeautifulSoup(html, "html.parser")
+            
+            cards = soup.select("div.srp-jobtuple-wrapper")
             if not cards:
-                cards = driver.find_elements(By.CSS_SELECTOR, "article.jobTuple")
-        except Exception:
+                cards = soup.select("article.jobTuple")
+            if not cards:
+                cards = soup.select(".jobTuple")
+        except Exception as exc:
+            logger.error("Error reading page source: %s", exc)
             return jobs
 
         for card in cards:
@@ -141,34 +148,80 @@ class NaukriScraper(BaseScraper):
             except Exception as exc:
                 logger.debug("Error parsing card: %s", exc)
 
+        if jobs:
+            sample = jobs[0]
+            desc_preview = (sample.get("description") or "")[:100]
+            logger.info(
+                "Sample extracted job - Title: '%s', Company: '%s', Experience: '%s', "
+                "Skills: %s, Desc preview: '%s...'",
+                sample.get("title", ""),
+                sample.get("company", ""),
+                sample.get("experience", ""),
+                sample.get("skills", []),
+                desc_preview
+            )
+
         return jobs
 
-    def _parse_card(self, card) -> dict[str, Any] | None:
+    def _parse_card(self, card: Any) -> dict[str, Any] | None:
         job: dict[str, Any] = {
             "title": "",
             "company": "",
             "location": "",
             "url": "",
             "description": "",
+            "skills": [],
+            "experience": "",
+            "salary": "",
         }
 
-        try:
-            title_el = card.find_element(By.CSS_SELECTOR, "a.title")
-            job["title"] = title_el.text.strip()
-            job["url"] = title_el.get_attribute("href")
-        except Exception:
+        # Title & URL
+        title_el = card.select_one("a.title") or card.select_one(".title")
+        if not title_el:
             return None
             
-        try:
-            company_el = card.find_element(By.CSS_SELECTOR, "a.comp-name")
-            job["company"] = company_el.text.strip()
-        except Exception:
-            pass
+        job["title"] = title_el.get_text(strip=True)
+        job["url"] = title_el.get("href", "")
             
-        try:
-            loc_el = card.find_element(By.CSS_SELECTOR, "span.locWdth")
-            job["location"] = loc_el.text.strip()
-        except Exception:
-            pass
+        # Company
+        company_el = card.select_one("a.comp-name") or card.select_one(".companyName")
+        if company_el:
+            job["company"] = company_el.get_text(strip=True)
+            
+        # Location
+        loc_el = card.select_one("span.locWdth") or card.select_one(".locWdth") or card.select_one(".location")
+        if loc_el:
+            job["location"] = loc_el.get_text(strip=True)
+
+        # Experience
+        exp_el = card.select_one("span.expwdth") or card.select_one(".expwdth") or card.select_one(".experience")
+        if exp_el:
+            job["experience"] = exp_el.get_text(strip=True)
+
+        # Salary
+        sal_el = card.select_one("span.sal") or card.select_one(".sal") or card.select_one(".salary")
+        if sal_el:
+            job["salary"] = sal_el.get_text(strip=True)
+            if job["salary"].lower() == "not disclosed":
+                job["salary"] = ""
+
+        # Description / Requirements Summary
+        desc_el = card.select_one("span.job-desc") or card.select_one(".job-desc") or card.select_one(".jobDescription")
+        if desc_el:
+            job["description"] = desc_el.get_text(strip=True)
+
+        # Skills / Tech Stack
+        skill_els = card.select("ul.tags-gt > li.tag-li")
+        if not skill_els:
+            skill_els = card.select("ul.tags > li")
+        if not skill_els:
+            skill_els = card.select(".tags li")
+            
+        if skill_els:
+            job["skills"] = [skill.get_text(strip=True) for skill in skill_els if skill.get_text(strip=True)]
+
+        # Fallback for description: combine skills + requirements if summary missing
+        if not job["description"] and job["skills"]:
+            job["description"] = "Key Skills: " + ", ".join(job["skills"])
 
         return job

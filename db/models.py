@@ -27,6 +27,10 @@ class Job(Base):
     url = Column(Text, unique=True, nullable=False)
     source = Column(String(128), nullable=False)
     description = Column(Text, nullable=True)
+    experience = Column(String(128), nullable=True)
+    salary = Column(String(128), nullable=True)
+    from sqlalchemy import JSON
+    skills = Column(JSON, nullable=True)
     relevance_score = Column(Float, nullable=True)
     alerted = Column(Boolean, default=False, nullable=False)
     applied = Column(Boolean, default=False, nullable=False)
