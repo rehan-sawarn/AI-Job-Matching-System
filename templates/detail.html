@@ -59,7 +59,7 @@
             {% set display_desc = job.detailed_description if job.detailed_description else job.description %}
             {% if display_desc %}
             <div class="prose prose-slate dark:prose-invert max-w-none text-surface-700 dark:text-surface-300 leading-relaxed whitespace-pre-line text-sm antialiased">
-                {{ display_desc|safe }}
+                {{ display_desc }}
             </div>
             {% else %}
             <div class="py-12 text-center">

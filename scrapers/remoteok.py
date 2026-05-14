@@ -33,11 +33,22 @@ HEADERS = {
 class RemoteOKScraper(BaseScraper):
     source = "remoteok"
 
-    def scrape(self) -> list[dict[str, Any]]:
+    def scrape(self, keywords: list[dict[str, str]] | None = None) -> list[dict[str, Any]]:
         jobs: list[dict[str, Any]] = []
         seen_ids: set[str] = set()
 
-        for tags in TAG_QUERIES:
+        # Use passed keywords or fall back to defaults
+        search_terms: list[list[str]] = []
+        if keywords:
+            # RemoteOK likes simple tags
+            for item in keywords:
+                kw = item.get("keyword", "").lower()
+                # Split by space if it's a multi-word keyword for RemoteOK tags
+                search_terms.append(kw.split())
+        else:
+            search_terms = TAG_QUERIES
+
+        for tags in search_terms:
             tag_label = "+".join(tags)
             logger.info("Fetching RemoteOK jobs: tags=%s", tag_label)
 

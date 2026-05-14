@@ -6,6 +6,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     Float,
+    JSON,
     String,
     Text,
 )
@@ -27,13 +28,15 @@ class Job(Base):
     url = Column(Text, unique=True, nullable=False)
     source = Column(String(128), nullable=False)
     description = Column(Text, nullable=True)
+    detailed_description = Column(Text, nullable=True)
     experience = Column(String(128), nullable=True)
+    experience_level = Column(String(64), nullable=True)
     salary = Column(String(128), nullable=True)
-    from sqlalchemy import JSON
     skills = Column(JSON, nullable=True)
     relevance_score = Column(Float, nullable=True)
     alerted = Column(Boolean, default=False, nullable=False)
     applied = Column(Boolean, default=False, nullable=False)
+    enriched = Column(Boolean, default=False, nullable=False)
     notes = Column(Text, nullable=True)
     created_at = Column(
         DateTime(timezone=True),
@@ -45,6 +48,28 @@ class Job(Base):
         return f"<Job id={self.id!r} title={self.title!r} company={self.company!r}>"
 
 
+class Keyword(Base):
+    __tablename__ = "keywords"
+
+    id = Column(String(32), primary_key=True)
+    keyword = Column(String(128), unique=True, nullable=False)
+    label = Column(String(128), nullable=True)
+    enabled = Column(Boolean, default=True, nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    def __repr__(self) -> str:
+        return f"<Keyword id={self.id!r} keyword={self.keyword!r}>"
+
+
 def make_job_id(url: str) -> str:
     """Generate a deterministic MD5 job ID from the job URL."""
     return hashlib.md5(url.encode("utf-8")).hexdigest()
+
+
+def make_keyword_id(keyword: str) -> str:
+    """Generate a deterministic MD5 ID from the keyword."""
+    return hashlib.md5(keyword.strip().lower().encode("utf-8")).hexdigest()

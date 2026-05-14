@@ -57,8 +57,19 @@ USER_AGENT = (
 class WellfoundScraper(BaseScraper):
     source = "wellfound"
 
-    def scrape(self) -> list[dict[str, Any]]:
+    def scrape(self, keywords: list[dict[str, str]] | None = None) -> list[dict[str, Any]]:
         jobs: list[dict[str, Any]] = []
+
+        # Use passed keywords or fall back to defaults
+        search_terms: list[tuple[str, str]] = []
+        if keywords:
+            for item in keywords:
+                kw = item.get("keyword", "")
+                # Wellfound likes slugs like "artificial-intelligence-engineer"
+                slug = kw.lower().replace(" ", "-")
+                search_terms.append((slug, "india")) # Assuming india as default location
+        else:
+            search_terms = ROLE_SEARCHES
 
         with sync_playwright() as pw:
             browser: Browser = pw.chromium.launch(
@@ -85,7 +96,7 @@ class WellfoundScraper(BaseScraper):
             # Warm up: visit the homepage first so we look like a real visitor
             self._warm_up(page)
 
-            for role_slug, location_slug in ROLE_SEARCHES:
+            for role_slug, location_slug in search_terms:
                 label = f"{role_slug}/{location_slug}"
                 logger.info("Scraping Wellfound: %s", label)
                 role_jobs = self._scrape_role(page, role_slug, location_slug)

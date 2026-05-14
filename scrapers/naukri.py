@@ -14,6 +14,7 @@ import time
 from typing import Any
 
 import undetected_chromedriver as uc
+from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 
 from scrapers.base import BaseScraper
@@ -34,8 +35,20 @@ PAGES_PER_SEARCH = 2
 class NaukriScraper(BaseScraper):
     source = "naukri"
 
-    def scrape(self) -> list[dict[str, Any]]:
+    def scrape(self, keywords: list[dict[str, str]] | None = None) -> list[dict[str, Any]]:
         jobs: list[dict[str, Any]] = []
+
+        # Use passed keywords or fall back to defaults
+        search_terms: list[tuple[str, str]] = []
+        if keywords:
+            for item in keywords:
+                # Convert "AI Engineer" -> "ai-engineer" for the URL slug
+                kw = item.get("keyword", "")
+                label = item.get("label", kw)
+                slug = kw.lower().replace(" ", "-")
+                search_terms.append((slug, label))
+        else:
+            search_terms = SEARCH_SLUGS
 
         # We must suppress the exception thrown when quitting undetected-chromedriver on Windows
         try:
@@ -47,7 +60,7 @@ class NaukriScraper(BaseScraper):
                 headless=False,
                 use_subprocess=True,
                 options=options,
-                version_main=146,  # Matches the user's Chrome version
+                version_main=148,  # Matches the user's Chrome version
             )
 
             # Warm-up
@@ -57,7 +70,7 @@ class NaukriScraper(BaseScraper):
             except Exception as e:
                 logger.warning("Warm-up failed: %s", e)
 
-            for slug, label in SEARCH_SLUGS:
+            for slug, label in search_terms:
                 logger.info("Scraping Naukri: %s", label)
                 slug_jobs = self._scrape_slug(driver, slug, label)
                 logger.info("Found %d jobs for %s", len(slug_jobs), label)
@@ -89,7 +102,65 @@ class NaukriScraper(BaseScraper):
         base = f"{BASE_URL}/{slug}-jobs-in-india"
         return base if page_num == 1 else f"{base}-{page_num}"
 
-    def _scrape_slug(self, driver: uc.Chrome, slug: str, label: str) -> list[dict[str, Any]]:
+    def enrich_jobs(self, jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Fetch full details for a batch of jobs by reusing one driver session."""
+        if not jobs:
+            return []
+
+        enriched_jobs = []
+        driver = None
+        try:
+            options = uc.ChromeOptions()
+            options.add_argument("--window-size=1440,900")
+            options.add_argument("--disable-extensions")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+
+            driver = uc.Chrome(options=options, version_main=148)
+
+            for job in jobs:
+                url = job.get("url")
+                if not url:
+                    enriched_jobs.append(job)
+                    continue
+
+                try:
+                    logger.info("Enriching Naukri job: %s", job.get("title"))
+                    driver.get(url)
+                    time.sleep(random.uniform(3.0, 5.0))
+
+                    soup = BeautifulSoup(driver.page_source, "html.parser")
+
+                    # Full description usually in .job-desc or similar
+                    desc_el = soup.select_one(".job-desc") or soup.select_one(".description") or soup.select_one("section.job-desc")
+                    if desc_el:
+                        job["detailed_description"] = desc_el.get_text(separator="\n", strip=True)
+
+                    # Additional metadata extraction can go here (salary, company info etc)
+                    # If detail page has better salary/experience info, update it
+
+                    job["enriched"] = True
+                    enriched_jobs.append(job)
+
+                except Exception as e:
+                    logger.warning("Failed to enrich Naukri job %s: %s", url, e)
+                    enriched_jobs.append(job)
+
+        except Exception as e:
+            logger.error("Naukri enrichment failed: %s", e)
+            return jobs # Return as-is if driver fails
+        finally:
+            if driver:
+                try:
+                    driver.quit()
+                except Exception:
+                    pass
+
+        return enriched_jobs
+
+
+    def _scrape_slug(
+self, driver: uc.Chrome, slug: str, label: str) -> list[dict[str, Any]]:
         jobs: list[dict[str, Any]] = []
 
         for page_num in range(1, PAGES_PER_SEARCH + 1):
@@ -123,7 +194,6 @@ class NaukriScraper(BaseScraper):
         return jobs
 
     def _extract_jobs(self, driver: uc.Chrome) -> list[dict[str, Any]]:
-        from bs4 import BeautifulSoup
         jobs: list[dict[str, Any]] = []
 
         try:
@@ -176,52 +246,65 @@ class NaukriScraper(BaseScraper):
         }
 
         # Title & URL
-        title_el = card.select_one("a.title") or card.select_one(".title")
+        title_el = card.select_one("a.title") or card.select_one(".title") or card.select_one("[class*='title']")
         if not title_el:
             return None
             
         job["title"] = title_el.get_text(strip=True)
         job["url"] = title_el.get("href", "")
+        if job["url"] and not job["url"].startswith("http"):
+            job["url"] = "https://www.naukri.com" + job["url"]
             
         # Company
-        company_el = card.select_one("a.comp-name") or card.select_one(".companyName")
+        company_el = card.select_one("a.comp-name") or card.select_one(".companyName") or card.select_one("[class*='comp-name']")
         if company_el:
             job["company"] = company_el.get_text(strip=True)
             
         # Location
-        loc_el = card.select_one("span.locWdth") or card.select_one(".locWdth") or card.select_one(".location")
+        loc_el = (card.select_one("span.locWdth") or card.select_one(".locWdth") or 
+                  card.select_one(".location") or card.select_one("[class*='loc']"))
         if loc_el:
             job["location"] = loc_el.get_text(strip=True)
 
         # Experience
-        exp_el = card.select_one("span.expwdth") or card.select_one(".expwdth") or card.select_one(".experience")
+        exp_el = (card.select_one("span.expwdth") or card.select_one(".expwdth") or 
+                  card.select_one(".experience") or card.select_one("[class*='exp']"))
         if exp_el:
             job["experience"] = exp_el.get_text(strip=True)
 
         # Salary
-        sal_el = card.select_one("span.sal") or card.select_one(".sal") or card.select_one(".salary")
+        sal_el = (card.select_one("span.sal") or card.select_one(".sal") or 
+                  card.select_one(".salary") or card.select_one("[class*='salary']"))
         if sal_el:
-            job["salary"] = sal_el.get_text(strip=True)
-            if job["salary"].lower() == "not disclosed":
-                job["salary"] = ""
+            val = sal_el.get_text(strip=True)
+            if val.lower() not in ["not disclosed", "unspecified", "hidden"]:
+                job["salary"] = val
 
-        # Description / Requirements Summary
-        desc_el = card.select_one("span.job-desc") or card.select_one(".job-desc") or card.select_one(".jobDescription")
-        if desc_el:
-            job["description"] = desc_el.get_text(strip=True)
-
-        # Skills / Tech Stack
+        # Skills / Tech Stack - Very important for Phase 3
         skill_els = card.select("ul.tags-gt > li.tag-li")
         if not skill_els:
             skill_els = card.select("ul.tags > li")
         if not skill_els:
             skill_els = card.select(".tags li")
+        if not skill_els:
+            skill_els = card.select("[class*='tag'] li")
             
         if skill_els:
             job["skills"] = [skill.get_text(strip=True) for skill in skill_els if skill.get_text(strip=True)]
 
-        # Fallback for description: combine skills + requirements if summary missing
-        if not job["description"] and job["skills"]:
-            job["description"] = "Key Skills: " + ", ".join(job["skills"])
+        # Description / Requirements Summary
+        # Often Naukri has a short snippet in 'span.job-desc' or similar
+        desc_el = (card.select_one("span.job-desc") or card.select_one(".job-desc") or 
+                   card.select_one(".jobDescription") or card.select_one("[class*='desc']"))
+        if desc_el:
+            job["description"] = desc_el.get_text(strip=True)
+
+        # Enrichment: if description is short and we have skills, combine them
+        if (not job["description"] or len(job["description"]) < 50) and job["skills"]:
+            skill_str = "Required Skills: " + ", ".join(job["skills"])
+            if job["description"]:
+                job["description"] = f"{job['description']}\n\n{skill_str}"
+            else:
+                job["description"] = skill_str
 
         return job
