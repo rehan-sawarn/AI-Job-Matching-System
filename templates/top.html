@@ -2,95 +2,83 @@
 {% block title %}Top Jobs — AI Job Matching System{% endblock %}
 
 {% block content %}
-<div class="mb-8">
-    <h1 class="text-2xl font-bold text-surface-900 tracking-tight">Top Jobs</h1>
-    <p class="mt-1 text-sm text-surface-500">Highest-ranked listings with relevance score above 50%</p>
+<!-- Page Header -->
+<div class="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+    <div>
+        <h1 class="text-xl font-extrabold text-surface-900 tracking-tight">Priority Selection</h1>
+        <p class="mt-0.5 text-[10px] font-bold text-surface-400 uppercase tracking-[0.2em]">Ranked by Match Score (>50%)</p>
+    </div>
 </div>
 
 {% if jobs %}
-<div class="space-y-3">
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
     {% for job in jobs %}
-    <a href="/job/{{ job.id }}" class="block job-card bg-white border rounded-xl p-5
-              {% if loop.index <= 3 %}border-accent-200 ring-1 ring-accent-100{% else %}border-surface-200 hover:border-surface-300{% endif %}">
-        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-            <!-- Rank Badge -->
-            <div class="flex-shrink-0">
-                {% if loop.index == 1 %}
-                <div class="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center">
-                    <span class="text-sm font-bold text-amber-600">#1</span>
+    <article class="group bg-white border border-surface-200 rounded-xl overflow-hidden card-shadow card-hover transition-all">
+        <div class="p-5 flex items-start gap-5">
+            <!-- Rank & Score Group -->
+            <div class="flex-shrink-0 flex flex-col items-center gap-3">
+                <div class="w-10 h-10 rounded-xl flex items-center justify-center border-2
+                            {% if loop.index == 1 %}bg-amber-50 border-amber-200 text-amber-600
+                            {% elif loop.index == 2 %}bg-surface-50 border-surface-200 text-surface-500
+                            {% elif loop.index == 3 %}bg-orange-50 border-orange-200 text-orange-600
+                            {% else %}bg-surface-50 border-surface-100 text-surface-400{% endif %}">
+                    <span class="text-sm font-black tracking-tighter">#{{ loop.index }}</span>
                 </div>
-                {% elif loop.index == 2 %}
-                <div class="w-10 h-10 rounded-full bg-surface-100 border border-surface-200 flex items-center justify-center">
-                    <span class="text-sm font-bold text-surface-500">#2</span>
-                </div>
-                {% elif loop.index == 3 %}
-                <div class="w-10 h-10 rounded-full bg-amber-50/60 border border-amber-100 flex items-center justify-center">
-                    <span class="text-sm font-bold text-amber-700">#3</span>
-                </div>
-                {% else %}
-                <div class="w-10 h-10 rounded-full bg-surface-50 border border-surface-200 flex items-center justify-center">
-                    <span class="text-sm font-semibold text-surface-400">#{{ loop.index }}</span>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Job Info -->
-            <div class="flex-1 min-w-0">
-                <h2 class="text-base font-semibold text-surface-900 truncate mb-1">{{ job.title }}</h2>
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-surface-500">
-                    <span class="flex items-center gap-1.5">
-                        <svg class="w-3.5 h-3.5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                        </svg>
-                        {{ job.company }}
-                    </span>
-                    {% if job.location %}
-                    <span class="flex items-center gap-1.5">
-                        <svg class="w-3.5 h-3.5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        {{ job.location }}
-                    </span>
-                    {% endif %}
+                
+                <div class="text-center">
+                    <div class="text-lg font-black tracking-tighter {% if job.relevance_score >= 0.7 %}text-emerald-600{% elif job.relevance_score >= 0.4 %}text-amber-600{% else %}text-surface-400{% endif %}">
+                        {{ "%.0f"|format((job.relevance_score or 0) * 100) }}%
+                    </div>
+                    <div class="text-[8px] font-black text-surface-400 uppercase tracking-widest">Match</div>
                 </div>
             </div>
 
-            <!-- Right side -->
-            <div class="flex items-center gap-4 flex-shrink-0">
-                <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium
-                             source-{{ job.source|lower if job.source|lower in ['remoteok', 'naukri', 'wellfound'] else 'default' }}">
-                    {{ job.source }}
-                </span>
-                {% if job.relevance_score is not none %}
-                <div class="text-right">
-                    <div class="text-lg font-bold {% if job.relevance_score >= 0.7 %}text-emerald-600{% elif job.relevance_score >= 0.4 %}text-amber-600{% else %}text-surface-400{% endif %}">
-                        {{ "%.0f"|format(job.relevance_score * 100) }}%
+            <!-- Content Area -->
+            <div class="flex-1 min-w-0 space-y-3">
+                <header>
+                    <h2 class="text-base font-bold text-surface-900 truncate group-hover:text-accent-600 transition-colors">
+                        <a href="/job/{{ job.id }}">{{ job.title }}</a>
+                    </h2>
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-medium text-surface-500">
+                        <span class="flex items-center gap-1.5 text-surface-700">
+                            <svg class="w-3.5 h-3.5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                            {{ job.company }}
+                        </span>
+                        {% if job.location %}
+                        <span class="flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                            {{ job.location }}
+                        </span>
+                        {% endif %}
                     </div>
-                    <div class="w-16 h-1.5 bg-surface-100 rounded-full overflow-hidden mt-0.5">
-                        <div class="h-full rounded-full score-fill {% if job.relevance_score >= 0.7 %}bg-emerald-500{% elif job.relevance_score >= 0.4 %}bg-amber-500{% else %}bg-surface-300{% endif %}"
-                             style="width: {{ (job.relevance_score * 100)|int }}%"></div>
-                    </div>
+                </header>
+
+                <div class="flex items-center justify-between pt-2 border-t border-surface-50">
+                    <span class="inline-flex px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest source-{{ job.source|lower if job.source|lower in ['remoteok', 'naukri', 'internshala'] else 'default' }}">
+                        {{ job.source }}
+                    </span>
+                    <a href="/job/{{ job.id }}" class="text-[9px] font-black uppercase tracking-[0.2em] text-surface-400 hover:text-surface-900 transition-colors flex items-center gap-1">
+                        Review
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                    </a>
                 </div>
-                {% endif %}
-                <svg class="w-4 h-4 text-surface-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
             </div>
         </div>
-    </a>
+    </article>
     {% endfor %}
 </div>
-<div class="mt-6 text-center text-sm text-surface-400">
-    Showing top {{ jobs|length }} job{{ 's' if jobs|length != 1 else '' }}
+
+<div class="mt-8 pt-6 border-t border-surface-200 text-center">
+    <p class="text-[10px] font-bold text-surface-400 uppercase tracking-widest">End of Priority List ({{ jobs|length }} Total)</p>
 </div>
+
 {% else %}
-<div class="bg-white border border-surface-200 rounded-xl py-16 text-center">
-    <svg class="w-12 h-12 text-surface-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
-    </svg>
-    <h3 class="text-lg font-medium text-surface-700 mb-1">No top jobs yet</h3>
-    <p class="text-sm text-surface-400">Run the scraper to find high-scoring matches.</p>
+<div class="bg-white border border-surface-200 border-dashed rounded-2xl py-24 text-center card-shadow">
+    <div class="w-20 h-20 bg-surface-50 rounded-full flex items-center justify-center mx-auto mb-6 border border-surface-100">
+        <svg class="w-10 h-10 text-surface-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+    </div>
+    <h3 class="text-xl font-black text-surface-900 mb-2 tracking-tight">No Priority Matches</h3>
+    <p class="text-sm text-surface-500 max-w-sm mx-auto">None of the indexed jobs meet the >50% relevance threshold yet. Run a synchronization to update the index.</p>
 </div>
 {% endif %}
 {% endblock %}

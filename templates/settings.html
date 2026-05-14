@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block title %}Settings — AI Job Matching System{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-2xl font-bold text-surface-900 dark:text-surface-50 tracking-tight">Settings & Maintenance</h1>
+    <p class="mt-1 text-sm text-surface-500 dark:text-surface-400">Manage scraper keywords, sources, and data cleanup.</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <!-- Left: Keyword Management -->
+    <div class="lg:col-span-2 space-y-6">
+        <div class="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl overflow-hidden card-shadow">
+            <div class="px-5 py-4 border-b border-surface-100 dark:border-surface-800 flex items-center justify-between bg-surface-50 dark:bg-surface-800/50">
+                <h2 class="text-sm font-bold text-surface-900 dark:text-surface-100 uppercase tracking-wider">Dynamic Keywords</h2>
+                <span class="text-[10px] font-bold bg-accent-100 dark:bg-accent-900/30 text-accent-700 dark:text-accent-400 px-2 py-0.5 rounded-full uppercase">{{ keywords|length }} Total</span>
+            </div>
+            
+            <div class="p-5">
+                <!-- Add Keyword Form -->
+                <form id="add-keyword-form" class="flex flex-col sm:flex-row gap-3 mb-6">
+                    <div class="flex-1">
+                        <input type="text" id="new-keyword" placeholder="e.g. LLM Engineer" required
+                               class="w-full px-3 py-2 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg text-sm text-surface-800 dark:text-surface-100 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-accent-500 dark:focus:ring-accent-400">
+                    </div>
+                    <div class="flex-1">
+                        <input type="text" id="new-label" placeholder="Display Label (Optional)"
+                               class="w-full px-3 py-2 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg text-sm text-surface-800 dark:text-surface-100 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-accent-500 dark:focus:ring-accent-400">
+                    </div>
+                    <button type="submit" class="px-4 py-2 bg-surface-900 dark:bg-surface-100 text-white dark:text-surface-900 text-sm font-bold uppercase tracking-widest rounded-lg hover:bg-surface-800 dark:hover:bg-surface-200 transition-colors">
+                        Add
+                    </button>
+                </form>
+
+                <!-- Keywords List -->
+                <div class="space-y-2">
+                    {% for kw in keywords %}
+                    <div class="flex items-center justify-between p-3 bg-white dark:bg-surface-900 border border-surface-100 dark:border-surface-800 rounded-lg hover:border-surface-200 dark:hover:border-surface-700 transition-all">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full {% if kw.enabled %}bg-emerald-500{% else %}bg-surface-300 dark:bg-surface-700{% endif %}"></div>
+                            <div>
+                                <p class="text-sm font-semibold text-surface-900 dark:text-surface-100">{{ kw.label }}</p>
+                                <p class="text-[10px] text-surface-400 dark:text-surface-500 font-mono">{{ kw.keyword }}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="toggleKeyword('{{ kw.id }}')" 
+                                    class="px-2.5 py-1 text-[10px] font-bold uppercase rounded border transition-colors
+                                           {% if kw.enabled %}border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50{% else %}border-surface-200 dark:border-surface-700 text-surface-500 dark:text-surface-400 bg-surface-50 dark:bg-surface-800 hover:bg-surface-100 dark:hover:bg-surface-700{% endif %}">
+                                {{ "Enabled" if kw.enabled else "Disabled" }}
+                            </button>
+                            <button onclick="deleteKeyword('{{ kw.id }}')" 
+                                    class="p-1.5 text-surface-400 dark:text-surface-500 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not keywords %}
+                    <div class="text-center py-8 text-surface-400 dark:text-surface-500 text-sm italic">
+                        No keywords configured. Scrapers will use defaults.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Maintenance & Sources -->
+    <div class="space-y-6">
+        <!-- Source Selection for Next Run -->
+        <div class="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl overflow-hidden card-shadow">
+            <div class="px-5 py-4 border-b border-surface-100 dark:border-surface-800 bg-surface-50 dark:bg-surface-800/50">
+                <h2 class="text-sm font-bold text-surface-900 dark:text-surface-100 uppercase tracking-wider">Run Scraper</h2>
+            </div>
+            <div class="p-5">
+                <p class="text-xs text-surface-500 dark:text-surface-400 mb-4">Select sources to fetch new jobs.</p>
+                <div class="space-y-3 mb-6">
+                    <label class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-50 dark:hover:bg-surface-800 cursor-pointer transition-colors">
+                        <input type="checkbox" name="sources" value="naukri" checked class="w-4 h-4 rounded text-accent-600 focus:ring-accent-500 dark:bg-surface-800 dark:border-surface-700">
+                        <span class="text-sm font-medium text-surface-700 dark:text-surface-300">Naukri.com</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-50 dark:hover:bg-surface-800 cursor-pointer transition-colors">
+                        <input type="checkbox" name="sources" value="remoteok" checked class="w-4 h-4 rounded text-accent-600 focus:ring-accent-500 dark:bg-surface-800 dark:border-surface-700">
+                        <span class="text-sm font-medium text-surface-700 dark:text-surface-300">RemoteOK.com</span>
+                    </label>
+                    <label class="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-50 dark:hover:bg-surface-800 cursor-pointer transition-colors">
+                        <input type="checkbox" name="sources" value="internshala" checked class="w-4 h-4 rounded text-accent-600 focus:ring-accent-500 dark:bg-surface-800 dark:border-surface-700">
+                        <span class="text-sm font-medium text-surface-700 dark:text-surface-300">Internshala.com</span>
+                    </label>
+                </div>
+                <button onclick="runSelectedScrapers()" id="btn-run-custom"
+                        class="w-full py-2.5 bg-accent-600 dark:bg-accent-500 text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-accent-700 dark:hover:bg-accent-400 transition-all flex items-center justify-center gap-2">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                    Run Synchronization
+                </button>
+            </div>
+        </div>
+
+        <!-- Purge Data -->
+        <div class="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl overflow-hidden card-shadow">
+            <div class="px-5 py-4 border-b border-surface-100 dark:border-surface-800 bg-surface-50 dark:bg-surface-800/50">
+                <h2 class="text-sm font-bold text-surface-900 dark:text-surface-100 uppercase tracking-wider text-red-600 dark:text-red-400">Danger Zone</h2>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-bold text-surface-800 dark:text-surface-200">Naukri Jobs</p>
+                        <p class="text-[10px] text-surface-500 dark:text-surface-400 uppercase tracking-wider">{{ source_counts.get('naukri', 0) }} jobs cached</p>
+                    </div>
+                    <button onclick="purgeJobs('naukri')" class="px-3 py-1 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
+                        Purge
+                    </button>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-bold text-surface-800 dark:text-surface-200">RemoteOK Jobs</p>
+                        <p class="text-[10px] text-surface-500 dark:text-surface-400 uppercase tracking-wider">{{ source_counts.get('remoteok', 0) }} jobs cached</p>
+                    </div>
+                    <button onclick="purgeJobs('remoteok')" class="px-3 py-1 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
+                        Purge
+                    </button>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-bold text-surface-800 dark:text-surface-200">Internshala Jobs</p>
+                        <p class="text-[10px] text-surface-500 dark:text-surface-400 uppercase tracking-wider">{{ source_counts.get('internshala', 0) }} jobs cached</p>
+                    </div>
+                    <button onclick="purgeJobs('internshala')" class="px-3 py-1 text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">
+                        Purge
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    // Keyword management
+    document.getElementById('add-keyword-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const keyword = document.getElementById('new-keyword').value;
+        const label = document.getElementById('new-label').value;
+        
+        try {
+            const res = await fetch(`/api/keywords?keyword=${encodeURIComponent(keyword)}&label=${encodeURIComponent(label)}`, { method: 'POST' });
+            if (res.ok) {
+                showToast('success', 'Keyword added.');
+                window.location.reload();
+            }
+        } catch (err) {
+            showToast('error', 'Failed to add keyword.');
+        }
+    });
+
+    async function deleteKeyword(kwId) {
+        if (!confirm('Are you sure you want to delete this keyword?')) return;
+        try {
+            const res = await fetch(`/api/keywords/${kwId}`, { method: 'DELETE' });
+            if (res.ok) {
+                showToast('success', 'Keyword deleted.');
+                window.location.reload();
+            }
+        } catch (err) {
+            showToast('error', 'Failed to delete keyword.');
+        }
+    }
+
+    async function toggleKeyword(kwId) {
+        try {
+            const res = await fetch(`/api/keywords/${kwId}/toggle`, { method: 'POST' });
+            if (res.ok) {
+                window.location.reload();
+            }
+        } catch (err) {
+            showToast('error', 'Failed to toggle keyword.');
+        }
+    }
+
+    // Custom scraping
+    async function runSelectedScrapers() {
+        const checkboxes = document.querySelectorAll('input[name="sources"]:checked');
+        const sources = Array.from(checkboxes).map(cb => cb.value);
+        
+        if (sources.length === 0) {
+            showToast('error', 'Select at least one source.');
+            return;
+        }
+
+        const btn = document.getElementById('btn-run-custom');
+        btn.disabled = true;
+        btn.classList.add('opacity-50');
+        btn.textContent = 'Running...';
+
+        try {
+            const queryParams = sources.map(s => `sources=${s}`).join('&');
+            const res = await fetch(`/run?${queryParams}`, { method: 'POST' });
+            const data = await res.json();
+            showToast('success', `Done! ${data.new_saved} new jobs saved.`);
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (err) {
+            showToast('error', 'Scraper failed.');
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+            btn.textContent = 'Run Now';
+        }
+    }
+
+    // Purging
+    async function purgeJobs(source) {
+        if (!confirm(`Are you sure you want to purge all ${source} jobs? This cannot be undone.`)) return;
+        try {
+            const res = await fetch(`/api/maintenance/purge?source=${source}`, { method: 'POST' });
+            const data = await res.json();
+            showToast('success', `Purged ${data.deleted_count} jobs.`);
+            window.location.reload();
+        } catch (err) {
+            showToast('error', 'Failed to purge jobs.');
+        }
+    }
+</script>
+{% endblock %}

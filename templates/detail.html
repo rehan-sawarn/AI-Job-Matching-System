@@ -3,129 +3,154 @@
 
 {% block content %}
 <!-- Breadcrumb -->
-<nav class="mb-6 flex items-center gap-2 text-sm text-surface-400">
-    <a href="/" class="hover:text-surface-600 transition-colors">Dashboard</a>
-    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-    </svg>
-    <span class="text-surface-600 truncate max-w-xs">{{ job.title }}</span>
+<nav class="mb-6 flex items-center gap-2 text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest">
+    <a href="/" class="hover:text-surface-900 dark:hover:text-surface-300 transition-colors">Feed</a>
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"/></svg>
+    <span class="text-surface-900 dark:text-surface-100 truncate max-w-[200px]">{{ job.title }}</span>
 </nav>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <!-- Main Content (left 2/3) -->
-    <div class="lg:col-span-2 space-y-6">
-        <!-- Header Card -->
-        <div class="bg-white border border-surface-200 rounded-xl p-6">
-            <div class="flex items-start justify-between gap-4 mb-4">
-                <div class="min-w-0">
-                    <h1 class="text-xl font-bold text-surface-900 leading-tight mb-2">{{ job.title }}</h1>
-                    <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-surface-500">
-                        <span class="flex items-center gap-1.5">
-                            <svg class="w-4 h-4 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                            </svg>
+<div class="flex flex-col lg:flex-row gap-8">
+    
+    <!-- Main Content (Left 2/3) -->
+    <div class="flex-1 min-w-0 space-y-6">
+        <!-- Header Section -->
+        <div class="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl p-6 card-shadow">
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
+                <div class="min-w-0 space-y-3">
+                    <h1 class="text-2xl font-black text-surface-900 dark:text-surface-50 leading-tight tracking-tight">{{ job.title }}</h1>
+                    
+                    <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-medium text-surface-500 dark:text-surface-400">
+                        <span class="flex items-center gap-2 text-surface-900 dark:text-surface-200">
+                            <div class="w-8 h-8 rounded-full bg-surface-100 dark:bg-surface-800 flex items-center justify-center text-surface-400 dark:text-surface-500">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                            </div>
                             {{ job.company }}
                         </span>
                         {% if job.location %}
-                        <span class="flex items-center gap-1.5">
-                            <svg class="w-4 h-4 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-surface-300 dark:text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
                             {{ job.location }}
                         </span>
                         {% endif %}
-                        <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium
-                                     source-{{ job.source|lower if job.source|lower in ['remoteok', 'naukri', 'wellfound'] else 'default' }}">
-                            {{ job.source }}
-                        </span>
                     </div>
                 </div>
+
                 {% if job.relevance_score is not none %}
-                <div class="text-center flex-shrink-0 bg-surface-50 rounded-xl px-4 py-3">
-                    <div class="text-2xl font-bold {% if job.relevance_score >= 0.7 %}text-emerald-600{% elif job.relevance_score >= 0.4 %}text-amber-600{% else %}text-surface-400{% endif %}">
+                <div class="flex-shrink-0 bg-surface-50 dark:bg-surface-800 border border-surface-100 dark:border-surface-700 rounded-2xl p-4 text-center min-w-[100px]">
+                    <div class="text-3xl font-black tracking-tighter {% if job.relevance_score >= 0.7 %}text-emerald-600 dark:text-emerald-400{% elif job.relevance_score >= 0.4 %}text-amber-600 dark:text-amber-400{% else %}text-surface-400 dark:text-surface-500{% endif %}">
                         {{ "%.0f"|format(job.relevance_score * 100) }}%
                     </div>
-                    <div class="text-xs text-surface-400 mt-0.5">match</div>
+                    <div class="text-[9px] font-black text-surface-400 dark:text-surface-500 uppercase tracking-widest mt-1">Relevance</div>
                 </div>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Description -->
-        <div class="bg-white border border-surface-200 rounded-xl p-6">
-            <h2 class="text-sm font-semibold text-surface-900 uppercase tracking-wider mb-4">Job Description</h2>
-            {% if job.description %}
-            <div class="prose prose-sm max-w-none text-surface-700 leading-relaxed whitespace-pre-line">{{ job.description|safe }}</div>
+        <!-- Description Section -->
+        <div class="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl p-8 card-shadow">
+            <h2 class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-[0.2em] mb-6 border-b border-surface-100 dark:border-surface-800 pb-4 flex items-center gap-2">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h7"/></svg>
+                Detailed Description
+                {% if job.enriched %}
+                <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[8px] font-black uppercase tracking-widest border border-blue-100 dark:border-blue-800">Verified Full Data</span>
+                {% endif %}
+            </h2>
+
+            {% set display_desc = job.detailed_description if job.detailed_description else job.description %}
+            {% if display_desc %}
+            <div class="prose prose-slate dark:prose-invert max-w-none text-surface-700 dark:text-surface-300 leading-relaxed whitespace-pre-line text-sm antialiased">
+                {{ display_desc|safe }}
+            </div>
             {% else %}
-            <p class="text-sm text-surface-400 italic">No description available for this listing.</p>
+            <div class="py-12 text-center">
+                <p class="text-sm text-surface-400 dark:text-surface-500 italic">No description provided for this listing.</p>
+            </div>
+            {% endif %}
+
+
+            {% if job.skills %}
+            <div class="mt-12 pt-8 border-t border-surface-100 dark:border-surface-800">
+                <h3 class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-[0.2em] mb-4">Required Stack</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for skill in job.skills %}
+                    <span class="px-3 py-1.5 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg text-xs font-bold text-surface-600 dark:text-surface-300 uppercase tracking-tight">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
             {% endif %}
         </div>
     </div>
 
-    <!-- Sidebar (right 1/3) -->
-    <div class="space-y-6">
-        <!-- Actions Card -->
-        <div class="bg-white border border-surface-200 rounded-xl p-6 space-y-3">
-            <h3 class="text-sm font-semibold text-surface-900 uppercase tracking-wider mb-4">Actions</h3>
-            <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer" id="btn-apply"
-               class="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-accent-600 text-white text-sm font-medium rounded-lg
-                      hover:bg-accent-700 active:bg-accent-800 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                </svg>
-                Apply on {{ job.source|capitalize }}
+    <!-- Sidebar (Right 1/3) -->
+    <aside class="w-full lg:w-80 flex-shrink-0 space-y-6">
+        <!-- Main Actions Area -->
+        <div data-job-id="{{ job.id }}" class="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl p-5 card-shadow space-y-4">
+            <h3 class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest border-b border-surface-100 dark:border-surface-800 pb-3">Actions</h3>
+            
+            <a href="{{ job.url }}" target="_blank" rel="noopener noreferrer" 
+               class="flex items-center justify-center gap-2 w-full px-4 py-3 bg-surface-900 dark:bg-surface-50 text-white dark:text-surface-900 text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-surface-800 dark:hover:bg-surface-200 transition-all shadow-md active:scale-[0.98]">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                Apply Externally
             </a>
-            <button disabled
-                    id="btn-cover-letter"
-                    class="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-surface-100 text-surface-400 text-sm font-medium rounded-lg
-                           cursor-not-allowed border border-surface-200">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-                Generate Cover Letter
-                <span class="text-[10px] bg-surface-200 text-surface-500 px-1.5 py-0.5 rounded-full ml-1">Soon</span>
+            
+            <button onclick="toggleApplied('{{ job.id }}')"
+                    class="btn-mark-applied flex items-center justify-center gap-2 w-full px-4 py-3 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-surface-700 dark:text-surface-300 text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-surface-50 dark:hover:bg-surface-700 hover:border-surface-300 dark:hover:border-surface-600 transition-all active:scale-[0.98]">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                <span class="btn-text">{% if job.applied %}Revoke Application{% else %}Mark as Applied{% endif %}</span>
             </button>
+
+            <div class="pt-2">
+                <button disabled class="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-surface-50 dark:bg-surface-800 text-surface-300 dark:text-surface-600 text-[10px] font-bold uppercase tracking-widest rounded-lg border border-surface-100 dark:border-surface-700 cursor-not-allowed">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Draft Cover Letter
+                </button>
+            </div>
         </div>
 
-        <!-- Metadata Card -->
-        <div class="bg-white border border-surface-200 rounded-xl p-6">
-            <h3 class="text-sm font-semibold text-surface-900 uppercase tracking-wider mb-4">Details</h3>
-            <dl class="space-y-3 text-sm">
-                <div class="flex justify-between">
-                    <dt class="text-surface-400">Source</dt>
-                    <dd class="text-surface-700 font-medium">{{ job.source }}</dd>
-                </div>
-                <div class="flex justify-between">
-                    <dt class="text-surface-400">Score</dt>
-                    <dd class="font-medium {% if job.relevance_score is not none %}{% if job.relevance_score >= 0.7 %}text-emerald-600{% elif job.relevance_score >= 0.4 %}text-amber-600{% else %}text-surface-500{% endif %}{% else %}text-surface-400{% endif %}">
-                        {% if job.relevance_score is not none %}{{ "%.2f"|format(job.relevance_score) }}{% else %}—{% endif %}
+        <!-- Metadata Section -->
+        <div class="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl p-5 card-shadow">
+            <h3 class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest border-b border-surface-100 dark:border-surface-800 pb-3 mb-4">Metadata</h3>
+            <dl class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <dt class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-tight">Source</dt>
+                    <dd class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest source-{{ job.source|lower if job.source|lower in ['remoteok', 'naukri', 'internshala'] else 'default' }}">
+                        {{ job.source }}
                     </dd>
                 </div>
-                <div class="flex justify-between">
-                    <dt class="text-surface-400">Applied</dt>
-                    <dd class="text-surface-700 font-medium">{{ "Yes" if job.applied else "No" }}</dd>
+                <div class="flex justify-between items-center">
+                    <dt class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-tight">Experience</dt>
+                    <dd class="text-xs font-bold text-surface-900 dark:text-surface-100 capitalize">{{ job.experience_level or '—' }}</dd>
                 </div>
-                {% if job.created_at %}
-                <div class="flex justify-between">
-                    <dt class="text-surface-400">Added</dt>
-                    <dd class="text-surface-700 font-medium">{{ job.created_at.strftime('%b %d, %Y') }}</dd>
+                {% if job.salary %}
+                <div class="flex justify-between items-center">
+                    <dt class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-tight">Salary</dt>
+                    <dd class="text-xs font-black text-emerald-600 dark:text-emerald-400">{{ job.salary }}</dd>
                 </div>
                 {% endif %}
-                <div class="pt-2 border-t border-surface-100">
-                    <dt class="text-surface-400 mb-1">Job ID</dt>
-                    <dd class="text-xs text-surface-400 font-mono break-all">{{ job.id }}</dd>
+                <div class="flex justify-between items-center">
+                    <dt class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-tight">Status</dt>
+                    <dd id="applied-status-text" class="text-xs font-bold text-surface-900 dark:text-surface-100">{{ "Applied" if job.applied else "New" }}</dd>
                 </div>
+                {% if job.created_at %}
+                <div class="flex justify-between items-center pt-2 border-t border-surface-50 dark:border-surface-800">
+                    <dt class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-tight">Sync Date</dt>
+                    <dd class="text-xs font-medium text-surface-600 dark:text-surface-400">{{ job.created_at.strftime('%b %d, %Y') }}</dd>
+                </div>
+                {% endif %}
             </dl>
         </div>
 
-        <!-- Back Link -->
-        <a href="/" class="flex items-center gap-2 text-sm text-surface-400 hover:text-surface-600 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-            </svg>
-            Back to Dashboard
-        </a>
-    </div>
+        <!-- Danger/Internal Info -->
+        <div class="bg-surface-50 dark:bg-surface-900/50 border border-surface-200 dark:border-surface-800 rounded-xl p-5">
+            <h3 class="text-[9px] font-black text-surface-400 dark:text-surface-600 uppercase tracking-[0.2em] mb-3">System Identifiers</h3>
+            <div class="space-y-2">
+                <p class="text-[9px] text-surface-400 dark:text-surface-500 font-mono break-all leading-relaxed">ID: {{ job.id }}</p>
+                <a href="/" class="flex items-center gap-1.5 text-[10px] font-bold text-surface-500 hover:text-surface-900 dark:hover:text-surface-300 transition-colors uppercase tracking-tight mt-4">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                    Return to Feed
+                </a>
+            </div>
+        </div>
+    </aside>
 </div>
 {% endblock %}

@@ -3,153 +3,221 @@
 
 {% block content %}
 <!-- Page Header -->
-<div class="mb-8">
-    <h1 class="text-2xl font-bold text-surface-900 tracking-tight">Dashboard</h1>
-    <p class="mt-1 text-sm text-surface-500">{{ total_jobs }} jobs across all sources</p>
-</div>
-
-<!-- Filters -->
-<form id="filter-form" method="GET" action="/"
-      class="bg-white border border-surface-200 rounded-xl p-5 mb-8">
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Search -->
-        <div>
-            <label for="filter-keyword" class="block text-xs font-medium text-surface-500 uppercase tracking-wider mb-1.5">Search</label>
-            <input type="text"
-                   id="filter-keyword"
-                   name="keyword"
-                   value="{{ keyword or '' }}"
-                   placeholder="e.g. machine learning, python…"
-                   class="w-full px-3 py-2 bg-surface-50 border border-surface-200 rounded-lg text-sm text-surface-800
-                          placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent
-                          transition-shadow">
-        </div>
-
-        <!-- Source Filter -->
-        <div>
-            <label for="filter-source" class="block text-xs font-medium text-surface-500 uppercase tracking-wider mb-1.5">Source</label>
-            <select id="filter-source"
-                    name="source"
-                    class="w-full px-3 py-2 bg-surface-50 border border-surface-200 rounded-lg text-sm text-surface-800
-                           focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-transparent transition-shadow">
-                <option value="">All Sources</option>
-                <option value="remoteok" {% if source == 'remoteok' %}selected{% endif %}>RemoteOK</option>
-                <option value="naukri" {% if source == 'naukri' %}selected{% endif %}>Naukri</option>
-            </select>
-        </div>
-
-        <!-- Min Score -->
-        <div>
-            <label for="filter-min-score" class="block text-xs font-medium text-surface-500 uppercase tracking-wider mb-1.5">
-                Min Score: <span id="score-display" class="font-semibold text-surface-700">{{ "%.1f"|format(min_score if min_score is not none else 0) }}</span>
-            </label>
-            <input type="range"
-                   id="filter-min-score"
-                   name="min_score"
-                   min="0" max="1" step="0.1"
-                   value="{{ min_score if min_score is not none else 0 }}"
-                   oninput="document.getElementById('score-display').textContent = parseFloat(this.value).toFixed(1)"
-                   class="w-full h-2 bg-surface-200 rounded-lg appearance-none cursor-pointer accent-accent-600">
-        </div>
-
-        <!-- Submit -->
-        <div class="flex items-end">
-            <button type="submit"
-                    id="btn-apply-filters"
-                    class="w-full px-4 py-2 bg-surface-800 text-white text-sm font-medium rounded-lg
-                           hover:bg-surface-700 active:bg-surface-900 transition-colors
-                           focus:outline-none focus:ring-2 focus:ring-surface-500 focus:ring-offset-2">
-                Apply Filters
-            </button>
-        </div>
+<div class="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+    <div>
+        <h1 class="text-xl font-extrabold text-surface-900 dark:text-surface-50 tracking-tight">Job Feed</h1>
+        <p class="mt-0.5 text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-widest">Aggregate & Rank ({{ total_jobs }} Listings)</p>
     </div>
-</form>
+    
+    <div class="flex items-center gap-2">
+        <span class="inline-flex items-center px-2 py-1 rounded bg-surface-100 dark:bg-surface-800 text-[10px] font-bold text-surface-600 dark:text-surface-300 uppercase tracking-tight border border-surface-200 dark:border-surface-700">
+            Auto-filtered
+        </span>
+    </div>
+</div>
 
-<!-- Jobs List -->
-{% if jobs %}
-<div class="space-y-3">
-    {% for job in jobs %}
-    <a href="/job/{{ job.id }}" class="block job-card bg-white border border-surface-200 rounded-xl p-5 hover:border-surface-300">
-        <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-            <!-- Job Info -->
-            <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 mb-1">
-                    <h2 class="text-base font-semibold text-surface-900 truncate">{{ job.title }}</h2>
+<!-- Filter Sidebar (on lg) / Top Bar (on sm) -->
+<div class="flex flex-col lg:flex-row gap-8">
+    
+    <!-- Sidebar Filters -->
+    <aside class="w-full lg:w-64 flex-shrink-0 space-y-6">
+        <form id="filter-form" method="GET" action="/" class="space-y-6">
+            <!-- Main Search Group -->
+            <div class="space-y-4 bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-lg p-4 card-shadow">
+                <h3 class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest border-b border-surface-100 dark:border-surface-800 pb-2">Basic Filters</h3>
+                
+                <!-- Search -->
+                <div>
+                    <label for="filter-keyword" class="block text-[10px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1.5">Keywords</label>
+                    <input type="text" id="filter-keyword" name="keyword" value="{{ keyword or '' }}" placeholder="AI, Python, LLM..."
+                           class="w-full px-3 py-2 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-md text-xs text-surface-800 dark:text-surface-100 placeholder:text-surface-400 dark:placeholder:text-surface-500 focus:outline-none focus:ring-1 focus:ring-accent-500 dark:focus:ring-accent-400 focus:border-accent-500 transition-all">
                 </div>
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-surface-500">
-                    <span class="flex items-center gap-1.5">
-                        <svg class="w-3.5 h-3.5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                        </svg>
-                        {{ job.company }}
-                    </span>
-                    {% if job.location %}
-                    <span class="flex items-center gap-1.5">
-                        <svg class="w-3.5 h-3.5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        {{ job.location }}
-                    </span>
-                    {% endif %}
+
+                <!-- Source Filter -->
+                <div>
+                    <label for="filter-source" class="block text-[10px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1.5">Source</label>
+                    <select id="filter-source" name="source" 
+                            class="w-full px-3 py-2 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-md text-xs text-surface-800 dark:text-surface-100 focus:outline-none focus:ring-1 focus:ring-accent-500 transition-all">
+                        <option value="">All Sources</option>
+                        <option value="remoteok" {% if source == 'remoteok' %}selected{% endif %}>RemoteOK</option>
+                        <option value="naukri" {% if source == 'naukri' %}selected{% endif %}>Naukri</option>
+                        <option value="internshala" {% if source == 'internshala' %}selected{% endif %}>Internshala</option>
+                    </select>
                 </div>
             </div>
 
-            <!-- Right side: source + score + arrow -->
-            <div class="flex items-center gap-4 flex-shrink-0">
-                <!-- Source badge -->
-                <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium
-                             source-{{ job.source|lower if job.source|lower in ['remoteok', 'naukri', 'wellfound'] else 'default' }}">
-                    {{ job.source }}
-                </span>
+            <!-- Advanced Filters Group -->
+            <div class="space-y-4 bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-lg p-4 card-shadow">
+                <h3 class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest border-b border-surface-100 dark:border-surface-800 pb-2">Targeting</h3>
+                
+                <!-- Experience Level -->
+                <div>
+                    <label for="filter-experience" class="block text-[10px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1.5">Level</label>
+                    <select id="filter-experience" name="experience_level"
+                            class="w-full px-3 py-2 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-md text-xs text-surface-800 dark:text-surface-100 focus:outline-none focus:ring-1 focus:ring-accent-500 transition-all">
+                        <option value="">Any Level</option>
+                        <option value="internship" {% if experience_level == 'internship' %}selected{% endif %}>Internship</option>
+                        <option value="fresher" {% if experience_level == 'fresher' %}selected{% endif %}>Fresher</option>
+                        <option value="junior" {% if experience_level == 'junior' %}selected{% endif %}>Junior</option>
+                        <option value="mid-level" {% if experience_level == 'mid-level' %}selected{% endif %}>Mid-level</option>
+                        <option value="senior" {% if experience_level == 'senior' %}selected{% endif %}>Senior</option>
+                    </select>
+                </div>
 
-                <!-- Score -->
-                {% if job.relevance_score is not none %}
-                <div class="text-right">
-                    <div class="text-lg font-bold {% if job.relevance_score >= 0.7 %}text-emerald-600{% elif job.relevance_score >= 0.4 %}text-amber-600{% else %}text-surface-400{% endif %}">
-                        {{ "%.0f"|format(job.relevance_score * 100) }}%
+                <!-- Applied Status -->
+                <div>
+                    <label for="filter-applied" class="block text-[10px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1.5">Application</label>
+                    <select id="filter-applied" name="applied"
+                            class="w-full px-3 py-2 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-md text-xs text-surface-800 dark:text-surface-100 focus:outline-none focus:ring-1 focus:ring-accent-500 transition-all">
+                        <option value="">All Jobs</option>
+                        <option value="false" {% if applied == False %}selected{% endif %}>New Only</option>
+                        <option value="true" {% if applied == True %}selected{% endif %}>Applied Only</option>
+                    </select>
+                </div>
+
+                <!-- Min Score -->
+                <div>
+                    <label for="filter-min-score" class="block text-[10px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-1.5 flex justify-between">
+                        Match Quality <span class="dark:text-surface-100">{{ "%.1f"|format(min_score if min_score is not none else 0) }}+</span>
+                    </label>
+                    <input type="range" id="filter-min-score" name="min_score" min="0" max="1" step="0.1"
+                           value="{{ min_score if min_score is not none else 0 }}"
+                           class="w-full h-1.5 bg-surface-100 dark:bg-surface-800 rounded-lg appearance-none cursor-pointer accent-surface-900 dark:accent-surface-100">
+                </div>
+            </div>
+
+            <button type="submit" class="w-full py-2.5 bg-surface-900 dark:bg-surface-100 text-white dark:text-surface-900 text-xs font-bold uppercase tracking-widest rounded-md hover:bg-surface-800 dark:hover:bg-surface-200 transition-all shadow-sm active:scale-[0.98]">
+                Update View
+            </button>
+        </form>
+    </aside>
+
+    <!-- Jobs Main Feed -->
+    <main class="flex-1 min-w-0 space-y-4">
+        {% if jobs %}
+            {% for job in jobs %}
+            <article data-job-id="{{ job.id }}" 
+                     class="group relative bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl overflow-hidden card-shadow card-hover
+                            {% if job.applied %}applied-muted{% endif %}">
+                
+                <div class="p-5 flex flex-col sm:flex-row gap-5">
+                    <!-- Score Circle (Left side desktop, Top mobile) -->
+                    <div class="flex-shrink-0 flex sm:flex-col items-center justify-center gap-2">
+                        <div class="relative w-12 h-12 flex items-center justify-center">
+                            <svg class="w-full h-full transform -rotate-90">
+                                <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="3" fill="transparent" class="text-surface-100 dark:text-surface-800"></circle>
+                                <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="3" fill="transparent" 
+                                        stroke-dasharray="125.6" stroke-dashoffset="{{ 125.6 * (1 - (job.relevance_score or 0)) }}"
+                                        class="{% if job.relevance_score >= 0.7 %}text-emerald-500{% elif job.relevance_score >= 0.4 %}text-amber-500{% else %}text-surface-400{% endif %} score-fill"></circle>
+                            </svg>
+                            <span class="absolute text-[10px] font-black text-surface-900 dark:text-surface-50">{{ "%.0f"|format((job.relevance_score or 0) * 100) }}</span>
+                        </div>
+                        <span class="text-[9px] font-black text-surface-400 dark:text-surface-500 uppercase tracking-tighter">Match</span>
                     </div>
-                    <div class="w-16 h-1.5 bg-surface-100 rounded-full overflow-hidden mt-0.5">
-                        <div class="h-full rounded-full score-fill {% if job.relevance_score >= 0.7 %}bg-emerald-500{% elif job.relevance_score >= 0.4 %}bg-amber-500{% else %}bg-surface-300{% endif %}"
-                             style="width: {{ (job.relevance_score * 100)|int }}%"></div>
+
+                    <!-- Main Info -->
+                    <div class="flex-1 min-w-0 space-y-3">
+                        <header>
+                            <div class="flex flex-wrap items-center gap-2 mb-1">
+                                <h2 class="text-base font-bold text-surface-900 dark:text-surface-50 truncate leading-tight">
+                                    <a href="/job/{{ job.id }}" class="hover:text-accent-600 dark:hover:text-accent-400 transition-colors">{{ job.title }}</a>
+                                </h2>
+                                
+                                <div class="flex gap-1.5 flex-wrap">
+                                    {% if job.applied %}
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[9px] font-black uppercase tracking-widest border border-emerald-200 dark:border-emerald-800">Applied</span>
+                                    {% endif %}
+                                    
+                                    {% if job.experience_level %}
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border
+                                                 {% if job.experience_level in ['fresher', 'internship'] %}bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-100 dark:border-purple-800
+                                                 {% elif job.experience_level == 'junior' %}bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400 border-sky-100 dark:border-sky-800
+                                                 {% elif job.experience_level == 'senior' %}bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-800
+                                                 {% else %}bg-surface-50 dark:bg-surface-800 text-surface-600 dark:text-surface-400 border-surface-200 dark:border-surface-700{% endif %}">
+                                        {{ job.experience_level }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-surface-500 dark:text-surface-400">
+                                <span class="flex items-center gap-1.5 text-surface-700 dark:text-surface-300">
+                                    <svg class="w-3.5 h-3.5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                                    {{ job.company }}
+                                </span>
+                                {% if job.location %}
+                                <span class="flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                                    {{ job.location }}
+                                </span>
+                                {% endif %}
+                                {% if job.salary %}
+                                <span class="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    {{ job.salary }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </header>
+
+                        <!-- Skills -->
+                        {% if job.skills %}
+                        <div class="flex flex-wrap gap-1.5">
+                            {% for skill in job.skills[:5] %}
+                            <span class="px-1.5 py-0.5 bg-surface-50 dark:bg-surface-800 border border-surface-100 dark:border-surface-700 rounded text-[9px] font-bold text-surface-500 dark:text-surface-400 uppercase tracking-tight">{{ skill }}</span>
+                            {% endfor %}
+                            {% if job.skills|length > 5 %}
+                            <span class="text-[9px] font-bold text-surface-400 dark:text-surface-500 self-center">+{{ job.skills|length - 5 }}</span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Right Side Actions -->
+                    <div class="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-4 flex-shrink-0">
+                        <span class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest source-{{ job.source|lower if job.source|lower in ['remoteok', 'naukri', 'internshala'] else 'default' }}">
+                            {{ job.source }}
+                        </span>
+                        
+                        <div class="flex flex-col gap-2 w-full sm:w-auto">
+                            <button onclick="toggleApplied('{{ job.id }}', event)" 
+                                    class="btn-mark-applied w-full sm:w-28 px-3 py-1.5 rounded-md border border-surface-200 dark:border-surface-700 text-[10px] font-black uppercase tracking-widest bg-white dark:bg-surface-800 text-surface-600 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-700 hover:border-surface-300 dark:hover:border-surface-600 transition-all active:scale-95">
+                                <span class="btn-text">{% if job.applied %}Revoke{% else %}Apply{% endif %}</span>
+                            </button>
+                            <a href="/job/{{ job.id }}" class="hidden sm:block text-center text-[10px] font-black uppercase tracking-widest text-accent-600 dark:text-accent-400 hover:text-accent-700 dark:hover:text-accent-300">Details</a>
+                        </div>
                     </div>
                 </div>
-                {% else %}
-                <div class="text-sm text-surface-400 italic">unscored</div>
-                {% endif %}
 
-                <!-- Arrow -->
-                <svg class="w-4 h-4 text-surface-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
+                <!-- Subtle bottom bar -->
+                <div class="h-1 w-full bg-gradient-to-r from-transparent via-surface-100 dark:via-surface-800 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            </article>
+            {% endfor %}
+        {% else %}
+            <!-- Enhanced Empty State -->
+            <div class="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 border-dashed rounded-xl py-20 px-6 text-center card-shadow">
+                <div class="w-16 h-16 bg-surface-50 dark:bg-surface-800 rounded-full flex items-center justify-center mx-auto mb-4 border border-surface-100 dark:border-surface-700">
+                    <svg class="w-8 h-8 text-surface-300 dark:text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <h3 class="text-lg font-bold text-surface-900 dark:text-surface-50 mb-2 tracking-tight">Zero Results Found</h3>
+                <p class="text-sm text-surface-500 dark:text-surface-400 max-w-sm mx-auto mb-8">No jobs match your current filter parameters. Try broadening your keywords or resetting the match quality slider.</p>
+                <div class="flex flex-wrap items-center justify-center gap-3">
+                    <a href="/" class="px-4 py-2 bg-surface-900 dark:bg-surface-100 text-white dark:text-surface-900 text-xs font-bold uppercase tracking-widest rounded-md hover:bg-surface-800 dark:hover:bg-surface-200 transition-all shadow-sm">Reset Filters</a>
+                    <button onclick="runPipeline()" class="px-4 py-2 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-surface-900 dark:text-surface-100 text-xs font-bold uppercase tracking-widest rounded-md hover:bg-surface-50 dark:hover:bg-surface-700 transition-all shadow-sm">Sync New Data</button>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Pagination/Count Footer -->
+        {% if jobs %}
+        <div class="pt-6 flex items-center justify-between border-t border-surface-200 dark:border-surface-800">
+            <span class="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest">Showing {{ jobs|length }} results</span>
+            <div class="flex gap-2">
+                <button disabled class="p-2 rounded border border-surface-100 dark:border-surface-800 text-surface-300 dark:text-surface-700 cursor-not-allowed"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+                <button disabled class="p-2 rounded border border-surface-200 dark:border-surface-700 text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-800 transition-all"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
             </div>
         </div>
-    </a>
-    {% endfor %}
+        {% endif %}
+    </main>
 </div>
-{% else %}
-<!-- Empty State -->
-<div class="bg-white border border-surface-200 rounded-xl py-16 text-center">
-    <svg class="w-12 h-12 text-surface-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-    </svg>
-    <h3 class="text-lg font-medium text-surface-700 mb-1">No jobs found</h3>
-    <p class="text-sm text-surface-400 mb-6">Try adjusting your filters or run the scraper to fetch new listings.</p>
-    <button onclick="runPipeline()"
-            class="inline-flex items-center gap-2 px-5 py-2.5 bg-accent-600 text-white text-sm font-medium rounded-lg
-                   hover:bg-accent-700 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-        </svg>
-        Scrape Jobs Now
-    </button>
-</div>
-{% endif %}
-
-<!-- Result Count -->
-{% if jobs %}
-<div class="mt-6 text-center text-sm text-surface-400">
-    Showing {{ jobs|length }} job{{ 's' if jobs|length != 1 else '' }}
-</div>
-{% endif %}
 {% endblock %}
